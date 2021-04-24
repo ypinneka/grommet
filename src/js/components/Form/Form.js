@@ -80,6 +80,48 @@ const Form = forwardRef(
     }, [errorsProp, infosProp]);
     const validations = useRef({});
 
+    const setValid = nextErrors => {
+      let valid = false;
+
+      valid = requiredFields
+        .filter(n => Object.keys(validations.current).includes(n))
+        .every(
+          field =>
+            value[field] && (value[field] !== '' || value[field] !== false),
+        );
+
+      if (Object.keys(nextErrors).length > 0) valid = false;
+      return valid;
+    };
+
+    useEffect(() => {
+      const dirtyFields = Object.entries(validations.current).filter(
+        ([n]) => value[n] && (value[n] !== '' || value[n] !== false),
+      );
+      if (dirtyFields.length > 0) {
+        const [validatedErrors, validatedInfos] = validate(dirtyFields, value);
+
+        setValidationResults(prevValidationResults => {
+          const nextErrors = {
+            ...prevValidationResults.errors,
+            ...validatedErrors,
+          };
+          const nextInfos = {
+            ...prevValidationResults.infos,
+            ...validatedInfos,
+          };
+
+          const nextValidationResults = {
+            errors: nextErrors,
+            infos: nextInfos,
+            valid: setValid(nextErrors),
+          };
+          if (onValidate) onValidate(nextValidationResults);
+          return nextValidationResults;
+        });
+      }
+    }, []);
+
     // Currently, onBlur validation will trigger after a timeout of 120ms.
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -133,7 +175,7 @@ const Form = forwardRef(
             const nextValidationResults = {
               errors: nextErrors,
               infos: nextInfos,
-              valid,
+              valid: setValid(nextErrors),
             };
             if (onValidate) onValidate(nextValidationResults);
             return nextValidationResults;
@@ -376,6 +418,7 @@ const Form = forwardRef(
             const nextValidationResults = {
               errors: nextErrors,
               infos: nextInfos,
+              valid: setValid(nextErrors),
             };
             if (onValidate) onValidate(nextValidationResults);
             return nextValidationResults;
